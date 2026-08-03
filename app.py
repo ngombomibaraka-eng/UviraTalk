@@ -2,25 +2,42 @@ from datetime import datetime
 import random
 import os
 import re
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify, send_file, render_template_string, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import send_from_directory # Pour gerer l'APK
 
-# Importation depuis nos fichiers locaux
+# Chargement des variables d'environnement (.env)
+load_dotenv()
+
+# Importation des modules internes
 from database import db, User, PhraseMultilingue, Signalement, Article, CentreSante
 from intent_matcher import intent_matcher
 
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-uviratalk-secure-2024')
+# --- CONFIGURATION DE L'APPLICATION ---
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-uviratalk-2026')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///uviratalk.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialisation des extensions
 db.init_app(app)
-
 login_manager = LoginManager(app)
 login_manager.login_view = 'admin_login'
+
+
+# Methodes qui supporte le mobile ou APK
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    return send_from_directory('.', 'sw.js', mimetype='application/javascript')
+# Fin de l'APK 
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -29,7 +46,7 @@ def load_user(user_id):
     except:
         return None
 
-# --- STYLES CSS COMMUNS ---
+# --- STYLES COMMUNS (PAGES AUTH) ---
 COMMON_CSS = """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
@@ -50,7 +67,7 @@ COMMON_CSS = """
     </style>
 """
 
-# --- FONCTIONS UTILITAIRES ---
+# --- UTILITAIRES ---
 def normalize(text):
     if not text: return ""
     text = text.lower()
@@ -64,94 +81,25 @@ def detect_greeting(message):
 
 def reponse_greeting():
     heure = datetime.now().hour
-    if 5 <= heure < 12: return random.choice(["Bonjour ! Comment puis-je vous aider ?", "Bonjour. Avez-vous un symptôme ?"])
-    elif 12 <= heure < 17: return random.choice(["Bon après-midi. Comment allez-vous ?", "Bonjour. Je suis là pour vous aider."])
-    elif 17 <= heure < 22: return random.choice(["Bonsoir. Avez-vous un problème de santé ?", "Bonsoir. Je vous écoute."])
-    else: return random.choice(["Bonne nuit. Une urgence ?", "Je suis là si vous avez besoin d'aide."])
+    if 5 <= heure < 12: return random.choice(["Bonjour ! Comment puis-je vous aider ?", "Bonjour. Avez-vous un symptôme à signaler ?"])
+    elif 12 <= heure < 17: return random.choice(["Bon après-midi. Comment allez-vous ?", "Bonjour. Je suis là pour répondre à vos questions de santé."])
+    elif 17 <= heure < 22: return random.choice(["Bonsoir. Avez-vous un problème de santé ?", "Bonsoir. Je suis à votre écoute."])
+    else: return random.choice(["Bonne nuit. Y a-t-il une urgence de santé ?", "Je suis disponible si vous avez besoin d'assistance."])
 
-# --- TEMPLATES HTML (Pour les pages d'authentification) ---
-
-LOGIN_HTML = '''
-<!DOCTYPE html>
-<html><head><title>Connexion Admin</title><meta name="viewport" content="width=device-width,initial-scale=1">
-''' + COMMON_CSS + '''
-</head><body>
-    <div class="login-card">
-        <div class="logo">🏥</div>
-        <h2>Admin UviraTalk</h2>
-        <p class="subtitle">Accès réservé au personnel</p>
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}<div class="error-msg">{{ messages[0] }}</div>{% endif %}
-        {% endwith %}
-        <form method="post">
-            <div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div>
-            <div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div>
-            <button type="submit">Se connecter</button>
-        </form>
-        <a href="/" class="link">← Retour au site</a>
-    </div>
-</body></html>'''
-
-REGISTER_HTML = '''
-<!DOCTYPE html>
-<html><head><title>Inscription</title><meta name="viewport" content="width=device-width,initial-scale=1">
-''' + COMMON_CSS + '''
-</head><body>
-    <div class="login-card">
-        <div class="logo">🌿</div>
-        <h2>Créer un compte</h2>
-        <p class="subtitle">Rejoignez la communauté UviraTalk</p>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, msg in messages if category == 'error' %}
-                <div class="error-msg">{{ msg }}</div>
-            {% endfor %}
-        {% endwith %}
-        <form method="post">
-            <div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div>
-            <div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div>
-            <button type="submit">S'inscrire</button>
-        </form>
-        <a href="/user/login" class="link">Déjà un compte ? Se connecter</a>
-    </div>
-</body></html>'''
-
-USER_LOGIN_HTML = '''
-<!DOCTYPE html>
-<html><head><title>Connexion Utilisateur</title><meta name="viewport" content="width=device-width,initial-scale=1">
-''' + COMMON_CSS + '''
-</head><body>
-    <div class="login-card">
-        <div class="logo">👤</div>
-        <h2>Bonjour</h2>
-        <p class="subtitle">Connectez-vous pour accéder à votre espace</p>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% for category, msg in messages if category == 'error' %}
-                <div class="error-msg">{{ msg }}</div>
-            {% endfor %}
-        {% endwith %}
-        <form method="post">
-            <div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div>
-            <div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div>
-            <button type="submit">Se connecter</button>
-        </form>
-        <a href="/register" class="link">Pas encore de compte ? S'inscrire</a>
-        <a href="/" class="link" style="margin-top:10px; font-weight:400;">Retour accueil</a>
-    </div>
-</body></html>'''
-
+# --- TEMPLATES HTML EMBARQUÉS (AUTH & DASHBOARD) ---
+LOGIN_HTML = '''<!DOCTYPE html><html><head><title>Connexion Admin</title><meta name="viewport" content="width=device-width,initial-scale=1">''' + COMMON_CSS + '''</head><body><div class="login-card"><div class="logo">🏥</div><h2>Admin UviraTalk</h2><p class="subtitle">Accès réservé au personnel</p>{% with messages = get_flashed_messages() %}{% if messages %}<div class="error-msg">{{ messages[0] }}</div>{% endif %}{% endwith %}<form method="post"><div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div><div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div><button type="submit">Se connecter</button></form><a href="/" class="link">← Retour au site</a></div></body></html>'''
+REGISTER_HTML = '''<!DOCTYPE html><html><head><title>Inscription</title><meta name="viewport" content="width=device-width,initial-scale=1">''' + COMMON_CSS + '''</head><body><div class="login-card"><div class="logo">🌿</div><h2>Créer un compte</h2><p class="subtitle">Rejoignez la communauté UviraTalk</p>{% with messages = get_flashed_messages(with_categories=true) %}{% for category, msg in messages if category == 'error' %}<div class="error-msg">{{ msg }}</div>{% endfor %}{% endwith %}<form method="post"><div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div><div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div><button type="submit">S'inscrire</button></form><a href="/user/login" class="link">Déjà un compte ? Se connecter</a></div></body></html>'''
+USER_LOGIN_HTML = '''<!DOCTYPE html><html><head><title>Connexion Utilisateur</title><meta name="viewport" content="width=device-width,initial-scale=1">''' + COMMON_CSS + '''</head><body><div class="login-card"><div class="logo">👤</div><h2>Bonjour</h2><p class="subtitle">Connectez-vous pour accéder à votre espace</p>{% with messages = get_flashed_messages(with_categories=true) %}{% for category, msg in messages if category == 'error' %}<div class="error-msg">{{ msg }}</div>{% endfor %}{% endwith %}<form method="post"><div class="form-group"><label>Nom d'utilisateur</label><input type="text" name="username" required></div><div class="form-group"><label>Mot de passe</label><input type="password" name="password" required></div><button type="submit">Se connecter</button></form><a href="/register" class="link">Pas encore de compte ? S'inscrire</a><a href="/" class="link" style="margin-top:10px; font-weight:400;">Retour accueil</a></div></body></html>'''
 USER_DASHBOARD_HTML = '''<!DOCTYPE html><html><head><title>Mon Compte</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:sans-serif;background:#f4f4f4;padding:20px}.navbar{background:#0f766e;color:white;padding:15px;display:flex;justify-content:space-between}.container{max-width:800px;margin:20px auto}.card{background:white;padding:20px;margin-bottom:20px;border-radius:12px;box-shadow:0 2px 5px rgba(0,0,0,0.1)}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background-color:#0f766e;color:white}a{color:#0f766e;text-decoration:none;padding:10px 20px;background:#e0f2f1;border-radius:20px;margin-right:10px}.btn-danger{background:#fee2e2;color:#b91c1c}</style></head><body><div class="navbar"><h3>Mon Espace</h3><div><a href="/">Accueil</a><a href="/user/logout" class="btn-danger">Déconnexion</a></div></div><div class="container"><div class="card"><h3>Bonjour, {{ user.username }}</h3></div><div class="card"><h3>Mes Signalements</h3><table><tr><th>Symptôme</th><th>Date</th></tr>{% for s in signalements %}<tr><td>{{ s.symptome }}</td><td>{{ s.date_signalement.strftime('%d/%m/%Y') }}</td></tr>{% endfor %}</table></div></div></body></html>'''
-
 DASHBOARD_HTML = '''<!DOCTYPE html><html><head><title>Dashboard Admin</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:'Segoe UI',Roboto,sans-serif;background:#f0fdf4;padding:20px}.navbar{background:#0f766e;color:white;padding:15px;display:flex;justify-content:space-between}.container{max-width:1000px;margin:20px auto}.card{background:white;padding:20px;margin-bottom:20px;border-radius:12px;box-shadow:0 4px 6px rgba(0,0,0,0.05)}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #e2e8f0;padding:12px;text-align:left}th{background-color:#f0fdf4;color:#0f766e;font-weight:600}input,textarea,select,button{width:100%;padding:12px;margin:5px 0;border:1px solid #cbd5e1;border-radius:8px}button{background:#0f766e;color:white;border:none;cursor:pointer;font-weight:600}</style></head><body><div class="navbar"><h3>UviraTalk Admin</h3><a href="/admin/logout" style="color:white;text-decoration:none;background:#b91c1c;padding:5px 15px;border-radius:20px">Déconnexion</a></div><div class="container"><div class="card"><h3>Statistiques</h3><p>Utilisateurs: {{ total_users }}</p><p>Signalements: {{ total_signals }}</p></div><div class="card"><h3>Signalements Récents</h3><table><tr><th>Symptôme</th><th>Lieu</th><th>Date</th></tr>{% for s in recent_signals %}<tr><td>{{ s.symptome }}</td><td>{{ s.localisation }}</td><td>{{ s.date_signalement.strftime('%d/%m/%Y') }}</td></tr>{% endfor %}</table></div><div class="card"><h3>Ajouter Article</h3><form method="post" action="/admin/article/new"><input type="text" name="titre" placeholder="Titre" required><textarea name="contenu" placeholder="Contenu" required></textarea><select name="categorie"><option value="actualite">Actualité</option><option value="conseil">Conseil</option></select><button type="submit">Publier</button></form></div></div></body></html>'''
 
-# --- ROUTES ---
-
+# --- ROUTES DE L'APPLICATION ---
 @app.route('/')
 def index():
-    # On sert le fichier index.html statique
     try:
         return send_file('index.html')
     except FileNotFoundError:
-        return "Erreur: Fichier index.html introuvable.", 404
+        return "Erreur : Le fichier index.html est introuvable au niveau de la racine du projet.", 404
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -159,35 +107,34 @@ def chat():
         data = request.json
         user_msg = data.get('message', '')
         if not user_msg: 
-            return jsonify({'reponse': "Je n'ai rien reçu.", 'intent': 'error'})
+            return jsonify({'reponse': "Je n'ai pas reçu de message.", 'intent': 'error'})
         
         user_norm = normalize(user_msg)
         
-        # Gestion simple des confirmations "Oui"
+        # Mots de confirmation basiques
         confirmation_words = ['oui', 'yes', 'ndiyo', 'ehe', 'ya', 'ok', 'daccord']
         if any(mot in user_norm for mot in confirmation_words):
             return jsonify({
-                'reponse': "D'accord. Pourriez-vous me décrire ce que vous ressentez ? (Ex: mal de tête, fièvre, toux...)", 
+                'reponse': "D'accord. Pourriez-vous me décrire plus en détail ce que vous ressentez ?", 
                 'intent': 'confirmation'
             })
-
-        # Gestion des salutations
+            
+        # Salutations
         if detect_greeting(user_msg):
             return jsonify({'reponse': reponse_greeting(), 'intent': 'greeting'})
-
-        # Appel au Matcher IA
+            
+        # Appel au Moteur IA (Deep Learning / GenAI)
         intent, reponse = intent_matcher.match_intent(user_msg)
         
-        # Formatage de la réponse pour le Web (remplace \n par <br>)
+        # Sauts de ligne pour le web
         reponse_formatee = reponse.replace('\n', '<br>')
         
         return jsonify({
             'reponse': reponse_formatee,
             'intent': intent
         })
-
     except Exception as e:
-        print(f"!!! ERREUR CRITIQUE DANS /api/chat : {e}")
+        print(f"!!! ERREUR DANS /api/chat : {e}")
         return jsonify({'reponse': "Désolé, une erreur technique est survenue.", 'intent': 'error'}), 500
 
 @app.route('/api/signalement', methods=['POST'])
@@ -238,8 +185,7 @@ def get_centres():
     except: 
         return jsonify([])
 
-# --- ROUTES AUTHENTIFICATION ---
-
+# --- ROUTES D'AUTHENTIFICATION ---
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if request.method == 'POST':
@@ -334,32 +280,34 @@ def user_logout():
     logout_user()
     return redirect(url_for('index'))
 
-# --- INITIALISATION DE LA BASE DE DONNÉES ---
+# --- INITIALISATION AU DEMARRAGE ---
 def init_db():
     with app.app_context():
         db.create_all()
         
-        # Création de l'admin par défaut
+        # Créer l'admin si inexistant
         if not User.query.filter_by(username='admin').first():
             admin = User(username='admin', password=generate_password_hash('admin123'), role='admin')
             db.session.add(admin)
             db.session.commit()
             print("✅ Admin créé (user: admin, pass: admin123)")
         
-        # Insertion des données IA si la table est vide
-        # Note : On met un try/except car insert_data.py peut contenir des erreurs de syntaxe
+        # Insérer les données si BDD vide
         if PhraseMultilingue.query.count() == 0:
             try:
-                # Import local
                 from insert_data import insert_data
-                print("📥 Insertion des données IA en cours...")
+                print("📥 Insertion des données de santé...")
                 insert_data()
-                print("✅ Données IA insérées avec succès")
+                print("✅ Données insérées")
             except Exception as e:
-                print(f"⚠️ Erreur lors de l'insertion des données : {e}")
-                print("⚠️ L'application démarrera sans données d'entraînement.")
+                print(f"⚠️ Erreur insertion données : {e}")
+
+        # Reconstruction du cache vectoriel pour l'IA
+        print("🤖 Calcul du cache d'embeddings Deep Learning...")
+        intent_matcher.build_embeddings_cache()
+        print("✅ Système d'IA prêt !")
 
 if __name__ == '__main__':
     init_db()
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
+

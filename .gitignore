@@ -1,0 +1,19 @@
+# Fichier tres important, il est essentiel d'ajouter un fichier .gitignore afin d'éviter de partager notre base de données locale ou nos clés d'API.
+
+# Environnement virtuel Python
+venv/
+env/
+ENV/
+
+# Base de données SQLite locale (sera régénérée automatiquement)
+instance/
+*.db
+*.sqlite3
+
+# Fichiers de configuration sensibles
+.env
+
+# Cache Python et PyTorch
+__pycache__/
+*.pyc
+.pytest_cache/

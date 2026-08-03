@@ -7,6 +7,22 @@
     <!-- Importation des polices et icônes -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Configuration PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063822.png">
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('Service Worker enregistré !'))
+            .catch(err => console.log('Erreur SW:', err));
+        });
+    }
+    </script>
     
     <style>
         /* --- VARIABLES & RESET --- */
@@ -24,9 +40,7 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             --radius: 16px;
         }
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: 'Poppins', sans-serif;
             line-height: 1.6;
@@ -34,10 +48,8 @@
             color: var(--text-dark);
             scroll-behavior: smooth;
         }
-
         a { text-decoration: none; color: inherit; transition: 0.3s ease; }
         ul { list-style: none; }
-
         /* --- NAVBAR --- */
         .navbar {
             background-color: rgba(255, 255, 255, 0.95);
@@ -48,7 +60,6 @@
             z-index: 1000;
             padding: 1rem 0;
         }
-
         .navbar .container {
             width: 90%;
             max-width: 1200px;
@@ -57,7 +68,6 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .logo {
             font-size: 1.5rem;
             font-weight: 700;
@@ -66,19 +76,16 @@
             align-items: center;
             gap: 10px;
         }
-
         .nav-links {
             display: flex;
             gap: 30px;
         }
-
         .nav-links a {
             font-weight: 500;
             color: var(--text-dark);
             font-size: 0.95rem;
             position: relative;
         }
-
         .nav-links a::after {
             content: '';
             position: absolute;
@@ -89,9 +96,7 @@
             background-color: var(--primary);
             transition: width 0.3s;
         }
-
         .nav-links a:hover::after { width: 100%; }
-
         .btn-nav {
             background-color: var(--primary);
             color: var(--white) !important;
@@ -99,15 +104,12 @@
             border-radius: 50px;
             box-shadow: 0 4px 6px rgba(15, 118, 110, 0.2);
         }
-
         .btn-nav:hover {
             background-color: var(--primary-light);
             transform: translateY(-2px);
             box-shadow: 0 6px 10px rgba(15, 118, 110, 0.3);
         }
-
         .menu-toggle { display: none; font-size: 1.5rem; color: var(--primary); cursor: pointer; }
-
         /* --- HERO SECTION --- */
         .hero {
             background: linear-gradient(rgba(15, 118, 110, 0.85), rgba(15, 23, 42, 0.8)), 
@@ -121,18 +123,15 @@
             border-bottom-right-radius: 50px;
             box-shadow: var(--shadow-lg);
         }
-
         .hero h1 { font-size: 2.8rem; margin-bottom: 15px; font-weight: 700; }
         .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto 30px auto; }
         .hero-badges { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
         .badge { background: rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
-
         /* --- LAYOUT GENERAL --- */
         .section { padding: 80px 20px; }
         .section-title { text-align: center; margin-bottom: 50px; }
         .section-title h2 { font-size: 2.2rem; color: var(--primary-dark); margin-bottom: 10px; }
         .section-title p { color: var(--text-light); font-size: 1.1rem; }
-
         /* --- CHATBOT UI --- */
         .chat-wrapper {
             max-width: 800px;
@@ -144,9 +143,8 @@
             border: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
-            height: 650px; /* Hauteur fixe pour le chat */
+            height: 650px;
         }
-
         .chat-header {
             background: var(--primary);
             color: var(--white);
@@ -156,7 +154,6 @@
             gap: 15px;
             box-shadow: var(--shadow-sm);
         }
-
         .bot-avatar {
             width: 45px;
             height: 45px;
@@ -168,7 +165,6 @@
             color: var(--primary);
             font-size: 1.4rem;
         }
-
         .chat-messages {
             flex: 1;
             overflow-y: auto;
@@ -178,12 +174,9 @@
             flex-direction: column;
             gap: 20px;
         }
-
-        /* Custom Scrollbar for Chat */
         .chat-messages::-webkit-scrollbar { width: 6px; }
         .chat-messages::-webkit-scrollbar-track { background: transparent; }
         .chat-messages::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 20px; }
-
         .message {
             max-width: 85%;
             padding: 15px 20px;
@@ -194,9 +187,7 @@
             animation: slideUp 0.3s ease-out;
             word-wrap: break-word;
         }
-
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
         .bot {
             background: var(--white);
             color: var(--text-dark);
@@ -205,7 +196,6 @@
             box-shadow: var(--shadow-sm);
             border: 1px solid #e2e8f0;
         }
-
         .user {
             background: var(--primary);
             color: var(--white);
@@ -213,7 +203,6 @@
             align-self: flex-end;
             box-shadow: 0 4px 10px rgba(15, 118, 110, 0.2);
         }
-
         .typing-indicator {
             font-size: 0.85rem;
             color: var(--text-light);
@@ -221,11 +210,9 @@
             margin-bottom: 10px;
             display: none;
             font-style: italic;
-            display: flex;
             align-items: center;
             gap: 5px;
         }
-        
         .typing-dots span {
             display: inline-block;
             width: 6px;
@@ -237,7 +224,6 @@
         .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
         .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
         .chat-input-area {
             padding: 20px;
             background: var(--white);
@@ -245,7 +231,6 @@
             display: flex;
             gap: 15px;
         }
-
         .chat-input-area input {
             flex: 1;
             padding: 14px 20px;
@@ -255,9 +240,7 @@
             transition: 0.3s;
             font-size: 1rem;
         }
-
         .chat-input-area input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1); }
-
         .chat-input-area button {
             background: var(--primary);
             color: var(--white);
@@ -272,9 +255,7 @@
             align-items: center;
             font-size: 1.2rem;
         }
-
         .chat-input-area button:hover { background: var(--primary-light); transform: scale(1.1); }
-
         /* --- ARTICLES & CARDS --- */
         .articles-grid {
             display: grid;
@@ -284,7 +265,6 @@
             max-width: 1200px;
             margin: auto;
         }
-
         .card {
             background: var(--white);
             border-radius: var(--radius);
@@ -295,9 +275,7 @@
             display: flex;
             flex-direction: column;
         }
-
         .card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
-
         .card-img-placeholder {
             height: 180px;
             background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
@@ -307,14 +285,12 @@
             color: var(--text-light);
             font-size: 3rem;
         }
-        
         .card-content { padding: 25px; flex: 1; display: flex; flex-direction: column; }
         .card-date { font-size: 0.8rem; color: var(--primary); font-weight: 600; margin-bottom: 10px; display: block; text-transform: uppercase; letter-spacing: 1px;}
         .card h3 { font-size: 1.25rem; margin-bottom: 10px; color: var(--text-dark); }
         .card p { font-size: 0.95rem; color: var(--text-light); margin-bottom: 20px; flex: 1; }
         .card-link { color: var(--primary); font-weight: 600; font-size: 0.95rem; margin-top: auto; display: inline-flex; align-items: center; gap: 5px; }
         .card-link:hover { gap: 10px; }
-
         /* --- FORMULAIRES --- */
         .form-container {
             background: var(--white);
@@ -324,7 +300,6 @@
             max-width: 600px;
             margin: auto;
         }
-
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 10px; font-weight: 600; color: var(--text-dark); }
         .form-control {
@@ -337,7 +312,6 @@
             font-size: 1rem;
         }
         .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1); }
-        
         .btn-submit {
             width: 100%;
             background: var(--primary);
@@ -351,7 +325,6 @@
             transition: 0.3s;
         }
         .btn-submit:hover { background: var(--primary-light); transform: translateY(-2px); }
-
         /* --- CENTRES DE SANTÉ --- */
         .centre-list {
             background: var(--white);
@@ -362,7 +335,6 @@
             max-width: 800px;
             margin: auto;
         }
-
         .centre-item {
             display: flex;
             align-items: flex-start;
@@ -371,10 +343,8 @@
             gap: 20px;
             transition: 0.2s;
         }
-        
         .centre-item:last-child { border-bottom: none; }
         .centre-item:hover { background-color: #f8fafc; }
-
         .centre-icon {
             background: var(--secondary);
             color: var(--primary);
@@ -387,7 +357,6 @@
             flex-shrink: 0;
             font-size: 1.2rem;
         }
-
         .btn-geo {
             background: var(--accent);
             color: white;
@@ -404,7 +373,6 @@
             box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
         }
         .btn-geo:hover { background: #d97706; transform: translateY(-2px); box-shadow: 0 6px 10px rgba(245, 158, 11, 0.4); }
-
         /* --- FOOTER --- */
         footer {
             background: var(--text-dark);
@@ -415,7 +383,6 @@
             border-top: 5px solid var(--primary);
         }
         footer p { opacity: 0.8; font-size: 0.95rem; margin-top: 10px; }
-
         /* --- RESPONSIVE --- */
         @media (max-width: 768px) {
             .menu-toggle { display: block; }
@@ -442,8 +409,6 @@
     </style>
 </head>
 <body>
-
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
             <a href="/" class="logo">
@@ -453,19 +418,17 @@
             <div class="menu-toggle" id="menu-toggle">
                 <i class="fas fa-bars"></i>
             </div>
-
             <div class="nav-links" id="nav-links">
-                <a href="/" onclick="closeMenu()">Accueil</a>
-                <a href="#chatbot" class="active" onclick="closeMenu()"><i class="fas fa-robot"></i> Assistant</a>
-                <a href="#signaler" onclick="closeMenu()"><i class="fas fa-exclamation-triangle"></i> Signaler</a>
-                <a href="#centres" onclick="closeMenu()"><i class="fas fa-hospital"></i> Centres</a>
-                <a href="#informations" onclick="closeMenu()"><i class="fas fa-newspaper"></i> Actualités</a>
-                <a href="/user/login" class="btn-nav" onclick="closeMenu()">Connexion</a>
+                <a href="/">Accueil</a>
+                <a href="#chatbot" class="active"><i class="fas fa-robot"></i> Assistant</a>
+                <a href="#signaler"><i class="fas fa-exclamation-triangle"></i> Signaler</a>
+                <a href="#centres"><i class="fas fa-hospital"></i> Centres</a>
+                <a href="#informations"><i class="fas fa-newspaper"></i> Actualités</a>
+                <a href="/user/login" class="btn-nav">Connexion</a>
             </div>
         </div>
     </nav>
 
-    <!-- Hero -->
     <header class="hero">
         <div class="container">
             <h1>Votre Santé, Notre Priorité</h1>
@@ -479,14 +442,12 @@
         </div>
     </header>
 
-    <!-- Chatbot Section -->
     <section id="chatbot" class="section">
         <div class="container">
             <div class="section-title">
                 <h2>Assistant IA Santé</h2>
                 <p>Posez vos questions 24h/24 et 7j/7. L'IA comprend vos dialectes locaux.</p>
             </div>
-
             <div class="chat-wrapper">
                 <div class="chat-header">
                     <div class="bot-avatar">
@@ -503,7 +464,7 @@
                 
                 <div class="chat-messages" id="chatMessages">
                     <div class="message bot">
-                        Bonjour (Mwanzo/Bonane) ! Je suis votre assistant santé. Comment puis-je vous aider aujourd'hui ? Vous pouvez écrire en français, swahili, kifuliiru ou kibembe.
+                        Bonjour ! Je suis votre assistant santé. Comment puis-je vous aider aujourd'hui ? Vous pouvez m'écrire en français, swahili, kifuliiru ou kibembe.
                     </div>
                 </div>
                 
@@ -511,7 +472,6 @@
                     <div class="typing-dots"><span></span><span></span><span></span></div>
                     <span>L'IA rédige une réponse...</span>
                 </div>
-
                 <div class="chat-input-area">
                     <input type="text" id="chatInput" placeholder="Tapez votre message ici..." autocomplete="off">
                     <button id="sendBtn" aria-label="Envoyer">
@@ -522,14 +482,12 @@
         </div>
     </section>
 
-    <!-- Signalement Section -->
     <section id="signaler" class="section" style="background-color: #f1f5f9;">
         <div class="container">
             <div class="section-title">
                 <h2>Signalement Communautaire</h2>
                 <p>Aidez-nous à identifier les épidémies ou urgences dans votre quartier.</p>
             </div>
-
             <div class="form-container">
                 <form id="signalForm">
                     <div class="form-group">
@@ -540,8 +498,7 @@
                             <option>Toux persistante</option>
                             <option>Diarrhée sévère</option>
                             <option>Suspicions de Paludisme</option>
-                            <option>Éruption cutanée (Rougeole/Varicelle)</option>
-                            <option>Maladie d'origine alimentaire</option>
+                            <option>Éruption cutanée</option>
                             <option>Autre</option>
                         </select>
                     </div>
@@ -562,7 +519,6 @@
         </div>
     </section>
 
-    <!-- Centres de santé -->
     <section id="centres" class="section">
         <div class="container">
             <div class="section-title">
@@ -571,7 +527,6 @@
             </div>
             
             <div id="centresList" class="centre-list">
-                <!-- Centres chargés via JS -->
                 <div style="padding:40px; text-align:center; color:var(--text-light);">
                     <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>
                     Chargement des centres...
@@ -586,7 +541,6 @@
         </div>
     </section>
 
-    <!-- Actualités -->
     <section id="informations" class="section" style="background-color: #f8fafc;">
         <div class="container">
             <div class="section-title">
@@ -594,12 +548,10 @@
                 <p>Les dernières informations sanitaires de la région.</p>
             </div>
             <div id="articlesList" class="articles-grid">
-                <!-- Articles chargés via JS -->
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
     <footer>
         <div class="container">
             <h3>UviraTalk</h3>
@@ -609,41 +561,20 @@
         </div>
     </footer>
 
-    <!-- JAVASCRIPT -->
     <script>
         document.addEventListener("DOMContentLoaded", function(){
-
-            // --- Navigation Mobile ---
             const menuToggle = document.getElementById("menu-toggle");
             const navLinks = document.getElementById("nav-links");
 
-            function closeMenu() {
-                if(window.innerWidth <= 768) {
-                    navLinks.classList.remove('active');
-                    menuToggle.querySelector('i').classList.remove('fa-times');
-                    menuToggle.querySelector('i').classList.add('fa-bars');
-                }
-            }
-
             menuToggle.addEventListener("click", function(){
                 navLinks.classList.toggle("active");
-                const icon = menuToggle.querySelector('i');
-                if(navLinks.classList.contains('active')){
-                    icon.classList.remove('fa-bars');
-                    icon.classList.add('fa-times');
-                } else {
-                    icon.classList.remove('fa-times');
-                    icon.classList.add('fa-bars');
-                }
             });
 
-            // --- Chatbot Logic ---
             const chatMessages = document.getElementById('chatMessages');
             const chatInput = document.getElementById('chatInput');
             const sendBtn = document.getElementById('sendBtn');
             const typingIndicator = document.getElementById('typingIndicator');
 
-            // Fonction pour scroller en bas
             function scrollToBottom() {
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             }
@@ -651,11 +582,7 @@
             function addMessage(text, isUser) {
                 const div = document.createElement('div');
                 div.className = `message ${isUser ? 'user' : 'bot'}`;
-                
-                // Utilisation de innerHTML pour supporter le formatage (gras, sauts de ligne) envoyé par Python
-                // Note: En production, assurez-vous de bien échapper le contenu pour éviter XSS
                 div.innerHTML = text; 
-                
                 chatMessages.appendChild(div);
                 scrollToBottom();
             }
@@ -664,14 +591,11 @@
                 const msg = chatInput.value.trim();
                 if (!msg) return;
                 
-                // Ajouter message utilisateur
                 addMessage(msg, true);
                 chatInput.value = '';
                 
-                // Afficher indicateur de frappe
                 typingIndicator.style.display = 'flex';
                 scrollToBottom();
-
                 try {
                     const res = await fetch('/api/chat', {
                         method: 'POST',
@@ -680,33 +604,26 @@
                     });
                     
                     const data = await res.json();
-                    
-                    // Cacher indicateur et afficher réponse
                     typingIndicator.style.display = 'none';
                     addMessage(data.reponse, false);
-                    
                 } catch(err) {
                     console.error(err);
                     typingIndicator.style.display = 'none';
-                    addMessage("Désolé, je n'ai pas pu joindre le serveur. Vérifiez votre connexion.", false);
+                    addMessage("Désolé, impossible d'atteindre le serveur d'IA.", false);
                 }
             }
-
             sendBtn.addEventListener('click', sendMessage);
-            
-            // Permettre l'envoi avec la touche Entrée
             chatInput.addEventListener('keydown', (e) => { 
                 if(e.key === 'Enter') sendMessage(); 
             });
 
-            // --- Charger les articles ---
             fetch('/api/articles')
                 .then(res => res.json())
                 .then(articles => {
                     const container = document.getElementById('articlesList');
                     if(container) {
                         if(articles.length === 0) {
-                            container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Aucun article disponible pour le moment.</p>';
+                            container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Aucun article disponible.</p>';
                             return;
                         }
                         container.innerHTML = articles.map((a) => `
@@ -718,128 +635,65 @@
                                     <span class="card-date">${a.date}</span>
                                     <h3>${a.titre}</h3>
                                     <p>${a.contenu.substring(0,120)}...</p>
-                                    <a href="#" class="card-link">Lire la suite <i class="fas fa-arrow-right"></i></a>
                                 </div>
                             </div>
                         `).join('');
                     }
-                })
-                .catch(() => {
-                    document.getElementById('articlesList').innerHTML = '<p style="text-align:center; color:red;">Impossible de charger les articles.</p>';
                 });
 
-            // --- Signalement ---
             const signalForm = document.getElementById('signalForm');
             if(signalForm) {
                 signalForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     const btn = document.getElementById('submitSignalBtn');
-                    const originalHTML = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
                     btn.disabled = true;
-
-                    let lat = null, lng = null;
                     
-                    // Tentative de géolocalisation silencieuse
-                    if (navigator.geolocation) {
-                        const position = await new Promise((resolve) => {
-                            navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), {timeout: 5000});
-                        });
-                        if(position) {
-                            lat = position.coords.latitude;
-                            lng = position.coords.longitude;
-                        }
-                    }
-
                     const data = {
                         symptome: document.getElementById('symptome').value,
                         description: document.getElementById('description').value,
-                        lieu: document.getElementById('lieu').value,
-                        latitude: lat,
-                        longitude: lng
+                        lieu: document.getElementById('lieu').value
                     };
-
                     try {
                         const res = await fetch('/api/signalement', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify(data)
                         });
-                        
-                        const msgDiv = document.getElementById('signalMsg');
                         if(res.ok) {
-                            msgDiv.innerHTML = `<div style="color:#15803d; font-weight:600; background:#dcfce7; padding:15px; border-radius:10px; border:1px solid #86efac;"><i class="fas fa-check-circle"></i> Signalement envoyé avec succès ! Merci de votre contribution.</div>`;
+                            document.getElementById('signalMsg').innerHTML = '<span style="color:green;">Signalement bien reçu !</span>';
                             signalForm.reset();
-                        } else {
-                            msgDiv.innerHTML = `<div style="color:#b91c1c; font-weight:600; background:#fee2e2; padding:15px; border-radius:10px; border:1px solid #fecaca;"><i class="fas fa-exclamation-circle"></i> Erreur lors de l'envoi. Veuillez réessayer.</div>`;
                         }
                     } catch(err) {
-                        document.getElementById('signalMsg').innerHTML = '<div style="color:#b91c1c; padding:15px;">Erreur de connexion au serveur.</div>';
+                        document.getElementById('signalMsg').innerHTML = '<span style="color:red;">Erreur lors de l\'envoi.</span>';
                     } finally {
-                        btn.innerHTML = originalHTML;
                         btn.disabled = false;
                     }
                 });
             }
 
-            // --- Centres de santé ---
             async function loadCentres() {
                 try {
                     const res = await fetch('/api/centres');
                     const centres = await res.json();
                     const container = document.getElementById('centresList');
-                    
                     if(!centres || centres.length === 0) {
-                        container.innerHTML = '<div style="padding:40px; text-align:center; color:var(--text-light);">Aucun centre enregistré pour le moment.</div>';
+                        container.innerHTML = '<div style="padding:20px; text-align:center;">Aucun centre répertorié.</div>';
                         return;
                     }
-                    
                     container.innerHTML = centres.map(c => `
                         <div class="centre-item">
-                            <div class="centre-icon">
-                                <i class="fas fa-clinic-medical"></i>
-                            </div>
+                            <div class="centre-icon"><i class="fas fa-clinic-medical"></i></div>
                             <div>
-                                <h4 style="margin-bottom:8px; color:var(--primary);">${c.nom}</h4>
-                                <p style="font-size:0.95rem; color:var(--text-light); margin-bottom:5px;">
-                                    <i class="fas fa-map-marker-alt" style="width:20px; text-align:center;"></i> ${c.adresse}
-                                </p>
-                                <p style="font-size:0.95rem; color:var(--text-light);">
-                                    <i class="fas fa-phone" style="width:20px; text-align:center;"></i> ${c.telephone}
-                                </p>
+                                <h4>${c.nom}</h4>
+                                <p>${c.adresse}</p>
                             </div>
                         </div>
                     `).join('');
                 } catch (e) {
-                    document.getElementById('centresList').innerHTML = '<div style="padding:20px; text-align:center; color:red;">Erreur de chargement des centres.</div>';
+                    document.getElementById('centresList').innerHTML = '<div style="padding:20px; text-align:center; color:red;">Erreur de chargement.</div>';
                 }
             }
             loadCentres();
-
-            // Géolocalisation manuelle (Bouton)
-            document.getElementById('geolocBtn')?.addEventListener('click', () => {
-                if(navigator.geolocation) {
-                    const btn = document.getElementById('geolocBtn');
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Localisation...';
-                    btn.disabled = true;
-                    
-                    navigator.geolocation.getCurrentPosition(position => {
-                        const lat = position.coords.latitude.toFixed(5);
-                        const lng = position.coords.longitude.toFixed(5);
-                        alert(`📍 Position trouvée :\nLatitude: ${lat}\nLongitude: ${lng}\n\nCes coordonnées peuvent être utilisées pour vous guider.`);
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }, () => {
-                        alert("⚠️ Accès à la position refusé ou impossible.");
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    });
-                } else {
-                    alert("⚠️ Votre navigateur ne supporte pas la géolocalisation.");
-                }
-            });
-
         });
     </script>
 </body>
