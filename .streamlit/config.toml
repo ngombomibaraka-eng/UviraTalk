@@ -1,0 +1,5 @@
+[server]
+headless = true
+runOnSave = false
+fileWatcherType = "auto"
+scriptPath = "app.py"
