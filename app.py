@@ -1,10 +1,12 @@
 # app.py
 """
-Interface Streamlit UviraTalk avec authentification et traçabilité.
+Interface Streamlit UviraTalk avec authentification et tracabilite.
 100% Python — aucun HTML/CSS/JS.
+Compatible Streamlit Cloud (import auto de la base si vide).
 """
 
 import os
+import logging
 import streamlit as st
 from flask import Flask
 from dotenv import load_dotenv
@@ -22,8 +24,14 @@ from auth import (
     validate_email, validate_password, validate_profile
 )
 from admin import show_admin_dashboard
+from config import DB_PATH, IS_CLOUD, DB_FILE
 
 load_dotenv()
+
+# Configuration du logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 # =============================================
 # CONFIGURATION
@@ -35,7 +43,18 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-DB_PATH = "sqlite:///uviratalk.db"
+
+# =============================================
+# CHARGEMENT DES SECRETS (Streamlit Cloud)
+# =============================================
+# Sur Streamlit Cloud, les secrets sont dans st.secrets
+# On les injecte dans os.environ pour que engine.py les trouve
+try:
+    if hasattr(st, "secrets") and "GEMINI_API_KEY" in st.secrets:
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+        logger.info("Cle Gemini chargee depuis st.secrets")
+except Exception as e:
+    logger.warning(f"Pas de secrets Streamlit : {e}")
 
 
 # =============================================
@@ -48,11 +67,65 @@ def get_flask_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     with app.app_context():
-        db.create_all()  # Crée les tables manquantes
+        db.create_all()
+    logger.info(f"Flask app initialisee. DB : {DB_FILE}")
     return app
 
 
 flask_app = get_flask_app()
+
+
+# =============================================
+# BOOTSTRAP : IMPORT AUTO SI BASE VIDE
+# =============================================
+@st.cache_resource
+def bootstrap_database(_app):
+    """
+    Verifie si la base contient des donnees.
+    Si vide : importe les dialogues et cree l'admin par defaut.
+    """
+    with _app.app_context():
+        count_d = DialogueTriage.query.count()
+        count_q = QAEducation.query.count()
+        count_u = Utilisateur.query.count()
+
+        logger.info(f"Etat base : {count_d} dialogues, {count_q} Q&R, {count_u} users")
+
+        # --- Import des dialogues si vide ---
+        if count_d == 0:
+            logger.info("Base vide : importation des dialogues en cours...")
+            try:
+                from import_data import importer_tout
+                importer_tout()
+                logger.info("Importation des dialogues terminee.")
+            except Exception as e:
+                logger.error(f"Erreur importation : {e}")
+
+        # --- Creation de l'admin si absent ---
+        with _app.app_context():
+            admin = Utilisateur.query.filter_by(email='admin@uviratalk.org').first()
+            if not admin:
+                logger.info("Creation de l'admin par defaut...")
+                admin = Utilisateur(
+                    email='admin@uviratalk.org',
+                    password_hash=hash_password('admin2026'),
+                    role='admin',
+                    prenom='Admin',
+                    post_nom='UviraTalk',
+                    age=30,
+                    sexe='Autre',
+                    localisation='Uvira',
+                )
+                db.session.add(admin)
+                db.session.commit()
+                logger.info("Admin cree : admin@uviratalk.org / admin2026")
+
+    return True
+
+
+# Lancer le bootstrap (une seule fois)
+with st.spinner("Initialisation de la base de donnees..."):
+    bootstrap_database(flask_app)
 
 
 # =============================================
@@ -64,7 +137,7 @@ def initialize_engine():
         count_d = DialogueTriage.query.count()
         count_q = QAEducation.query.count()
         if count_d == 0 and count_q == 0:
-            return None, "Base de donnees vide. Lancez : python import_data.py"
+            return None, "Base de donnees vide. Reessayez dans un instant."
         matcher = SmartAIMatcher()
         matcher.build_caches()
         return matcher, f"IA prete : {count_d} dialogues, {count_q} Q&R"
@@ -113,7 +186,7 @@ def create_user(email, password, prenom, post_nom, age, sexe, localisation):
 
 def update_last_login(user_id):
     with flask_app.app_context():
-        user = Utilisateur.query.get(user_id)
+        user = db.session.get(Utilisateur, user_id)
         if user:
             user.derniere_connexion = datetime.now(timezone.utc)
             db.session.commit()
@@ -129,7 +202,7 @@ def start_new_conversation(user_id):
 
 def end_conversation(conv_id):
     with flask_app.app_context():
-        conv = Conversation.query.get(conv_id)
+        conv = db.session.get(Conversation, conv_id)
         if conv:
             conv.date_fin = datetime.now(timezone.utc)
             db.session.commit()
@@ -148,7 +221,7 @@ def save_message(conv_id, role, contenu, theme=None, urgence=None,
             langue=langue,
         )
         db.session.add(msg)
-        conv = Conversation.query.get(conv_id)
+        conv = db.session.get(Conversation, conv_id)
         if conv:
             conv.nb_messages = (conv.nb_messages or 0) + 1
         db.session.commit()
@@ -249,9 +322,8 @@ def page_login():
                 st.error("Email ou mot de passe incorrect.")
                 return
 
-            # Récupérer les infos AVANT de sortir du contexte Flask
             with flask_app.app_context():
-                u = Utilisateur.query.get(user.id)
+                u = db.session.get(Utilisateur, user.id)
                 user_data = {
                     "id": u.id,
                     "email": u.email,
@@ -266,12 +338,10 @@ def page_login():
             st.session_state.user = user_data
             update_last_login(user.id)
 
-            # Nouvelle conversation
             conv_id = start_new_conversation(user.id)
             st.session_state.conversation_id = conv_id
 
-            # Message d'accueil personnalisé avec salutation selon l'heure
-            greeting = get_greeting_response("fr")  # "Bonjour !", "Bonsoir !"...
+            greeting = get_greeting_response("fr")
             prenom = user_data.get('prenom', '')
 
             welcome_body = (
@@ -287,10 +357,7 @@ def page_login():
             welcome_msg = f"**{greeting} {prenom} !** Ravi de vous revoir. {welcome_body}"
 
             st.session_state.messages = [
-                {
-                    "role": "assistant",
-                    "content": welcome_msg,
-                }
+                {"role": "assistant", "content": welcome_msg}
             ]
 
             st.rerun()
@@ -307,7 +374,6 @@ def page_login():
 def page_chat():
     user = st.session_state.user
 
-    # --- En-tête ---
     col1, col2 = st.columns([4, 1])
     with col1:
         st.title("🏥 UviraTalk")
@@ -332,21 +398,13 @@ def page_chat():
     st.success(status_message)
     st.divider()
 
-    # --- Sidebar ---
     with st.sidebar:
         st.header("💡 Exemples")
         exemples = [
-            "Bonjour",
-            "Comment vas-tu ?",
-            "Que peux-tu faire ?",
-            "J'ai la diarrhee",
-            "J'ai de la fievre",
-            "Mon enfant tousse",
-            "Je suis enceinte",
-            "Qu'est-ce que le paludisme ?",
-            "Je saigne beaucoup",
-            "Nina homa",
-            "Habari yako",
+            "Bonjour", "Comment vas-tu ?", "Que peux-tu faire ?",
+            "J'ai la diarrhee", "J'ai de la fievre", "Mon enfant tousse",
+            "Je suis enceinte", "Qu'est-ce que le paludisme ?",
+            "Je saigne beaucoup", "Nina homa", "Habari yako",
         ]
         for ex in exemples:
             if st.button(ex, key=f"btn_{ex}"):
@@ -377,14 +435,12 @@ def page_chat():
             ]
             st.rerun()
 
-    # --- Affichage des messages ---
     for idx, msg in enumerate(st.session_state.messages):
         avatar = "🩺" if msg["role"] == "assistant" else "👤"
         with st.chat_message(msg["role"], avatar=avatar):
             st.markdown(msg["content"])
             meta = msg.get("metadata")
             if meta:
-                # Alerte urgence
                 if meta.get("urgence") in ["Élevée", "Critique", "Très élevée", "Ya juu"]:
                     if meta["urgence"] in ["Critique", "Très élevée"]:
                         st.error(
@@ -397,14 +453,12 @@ def page_chat():
                             f"{meta.get('symptomes', 'Consultez rapidement.')}"
                         )
 
-                # Caption technique
                 if meta.get("theme"):
                     st.caption(
                         f"Theme : **{meta['theme']}** · "
                         f"Methode : `{meta.get('methode', 'N/A')}`"
                     )
 
-                # Bouton conseils
                 if meta.get("type") == "dialogue" and meta.get("theme"):
                     if st.button("📋 Voir les conseils", key=f"advice_{idx}"):
                         st.session_state[f"show_advice_{idx}"] = True
@@ -424,23 +478,16 @@ def page_chat():
                     if suggestion:
                         st.success(suggestion)
 
-    # --- Input ---
     if "pending_question" in st.session_state:
         prompt = st.session_state.pending_question
         del st.session_state.pending_question
     else:
         prompt = st.chat_input("Decrivez vos symptomes ou posez votre question...")
 
-    # --- Traitement ---
     if prompt:
-        # Sauvegarder le message utilisateur
-        save_message(
-            st.session_state.conversation_id,
-            "user", prompt
-        )
+        save_message(st.session_state.conversation_id, "user", prompt)
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        # Appel au moteur
         with flask_app.app_context():
             result = matcher.match_intent(prompt)
 
@@ -454,7 +501,6 @@ def page_chat():
             "type": result.get("type"),
         }
 
-        # Sauvegarder la réponse
         save_message(
             st.session_state.conversation_id,
             "assistant", reponse,
@@ -481,7 +527,6 @@ if st.session_state.user is None:
     else:
         page_register()
 else:
-    # Vérifier le rôle : admin → dashboard, patient → chat
     if st.session_state.user.get("role") == "admin":
         show_admin_dashboard(flask_app)
     else:
